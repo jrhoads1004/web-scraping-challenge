@@ -1,227 +1,112 @@
 from splinter import Browser
 from bs4 import BeautifulSoup
 import pandas as pd
-import time
-
-def init_browser():
-	executable_path = {'executable_path': '/usr/local/bin/chromedriver'}
-	return Browser('chrome', **executable_path, headless=False)
+import requests
+import re
 
 def scrape():
-	
-	browser = init_browser()
+    
+    executable_path = {'executable_path': 'chromedriver'}
+    browser = Browser('chrome', **executable_path, headless=False)
 
-	# Visit NASA
-	url = 'https://mars.nasa.gov/news/'
-	browser.visit(url)
+    url1="https://mars.nasa.gov/news/"
+    url2="https://www.jpl.nasa.gov/spaceimages/?search=&category=Mars"
+    url3="https://twitter.com/search?q=%23Marsweather&src=typed_query&f=live"
+    url4="https://space-facts.com/mars/"
+    url5="https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars"
 
-	# Pause, continue
-	time.sleep(2)
+    # NASA Mars News
+    content=requests.get(url1)
+    soup = BeautifulSoup(content.text,"html.parser")
 
-	# HTML object
-	html = browser.html
-	# Parse HTML with Beautiful Soup
-	soup = BeautifulSoup(html, 'html.parser')
-	# Retrieve all elements that contain book information
-	articles = soup.find_all('li', class_='slide')
+    content_title = soup.find(class_="content_title").get_text().replace('\n','').strip()
+    news_p = soup.find("div",class_="rollover_description_inner").get_text().replace('\n','').strip()
 
-	for article in articles:
-		# Retrieve specific div with class
-		div = article.find('div', class_='content_title')
-		# Funnel to 'a'
-		title = div.find('a')
-		# Only grab text
-		news_title = title.text
-		# Retrieve specific div with class
-		div = article.find('div', class_='article_teaser_body')
-		# Only grab text
-		news_p = div.text
-		
-	# Put results in dict
-	NASA_NEWS = {
-		"news_title":news_title,
-		"news_p":news_p
-	}
+    # JPL Mars Space Images - Featured Image
+    browser.visit(url2)
+    browser.find_by_id('full_image').click()
+    html = browser.html
+    soup = BeautifulSoup(html,"html.parser")
 
+    featured_image = soup.find('article').find("a").get("data-fancybox-href")
+    # featured_image = soup.find('div', {"class": "fancybox-inner fancybox-skin fancybox-dark-skin fancybox-dark-skin-open"}).img['src']
+    featured_image_url = (f"https://www.jpl.nasa.gov{featured_image}")
+    
+    #Mars Weather
+    browser.visit(url3)
+    html = browser.html
+    soup = BeautifulSoup(html,"html.parser")
+    insight = soup.find(text=re.compile('InSight'))
 
-	# Visit NASA images
-	url = 'https://www.jpl.nasa.gov/spaceimages/?search=&category=Mars'
-	browser.visit(url)
+    #Mars Facts
+    browser.visit(url4)
+    html = browser.html
+    soup = BeautifulSoup(html,"html.parser")
 
-	# Pause, continue
-	time.sleep(2)
+    mars_facts = soup.find("table",class_="tablepress tablepress-id-p-mars")
+    mars_facts_df=pd.read_html(str(mars_facts))[0]
+    mars_facts_df = mars_facts_df.rename(columns={0:'Parameter',1:"Values"})
+    mars_facts_df = mars_facts_df.set_index('Parameter')
+    mars_facts_df.to_html("templates/table.html")
 
-	# HTML object
-	html = browser.html
-	# Parse HTML with Beautiful Soup
-	soup = BeautifulSoup(html, 'html.parser')
-	# Retrieve all elements that contain book information
-	articles = soup.find_all('article', class_='carousel_item')
+    #Mars Hemispheres
+    browser.visit(url5)
+    browser.find_by_tag('h3')[0].click()
+    html = browser.html
+    soup = BeautifulSoup(html,"html.parser")
+    value=soup.find_all("li")
+    img1_url=value[0].a["href"]
+    img1_title=soup.find('h2', class_='title').text
+    print(img1_title)
+    print(img1_url)
 
-	for article in articles:
-		# Retrieve a to find href
-		a = article.find('a')
-		# Concatenate with base url
-		featured_image_url = 'https://www.jpl.nasa.gov/' + a['data-fancybox-href']
+    browser.visit(url5)
+    browser.find_by_tag('h3')[1].click()
+    html = browser.html
+    soup = BeautifulSoup(html,"html.parser")
+    value=soup.find_all("li")
+    img2_url=value[0].a["href"]
+    img2_title=soup.find('h2', class_='title').text
+    print(img2_title)
+    print(img2_url)
 
-	# Put results in dict
-	FEAT_IMG = {
-	"FEAT_IMG":featured_image_url
-	}
+    browser.visit(url5)
+    browser.find_by_tag('h3')[2].click()
+    html = browser.html
+    soup = BeautifulSoup(html,"html.parser")
+    value=soup.find_all("li")
+    img3_url=value[0].a["href"]
+    img3_title=soup.find('h2', class_='title').text
+    print(img3_title)
+    print(img3_url)
 
+    browser.visit(url5)
+    browser.find_by_tag('h3')[3].click()
+    html = browser.html
+    soup = BeautifulSoup(html,"html.parser")
+    value=soup.find_all("li")
+    img4_url=value[0].a["href"]
+    img4_title=soup.find('h2', class_='title').text
+    print(img4_title)
+    print(img4_url)
 
-	# Visit Mars Twitter
-	url = 'https://twitter.com/marswxreport?lang=en'
-	browser.visit(url)
+    # Store data in a dictionary
 
-	# Pause, continue
-	time.sleep(3)
+    mars_data = {
+        "News_Title": content_title,
+        "News_Paragraph": news_p,
+        "Featured_Image": featured_image_url,
+        "Weather": insight,
+        "img1" : img1_url,
+        "img2" : img2_url,
+        "img3" : img3_url,
+        "img4" : img4_url,
+        "img1_t" : img1_title,
+        "img2_t" : img2_title,
+        "img3_t" : img3_title,
+        "img4_t" : img4_title,
+    }
 
-	# HTML object
-	html = browser.html
-	# Parse HTML with Beautiful Soup
-	soup = BeautifulSoup(html, 'html.parser')
-	# Sleep
-	time.sleep(3)
-
-	# HTML object
-	html = browser.html
-	# Parse HTML with Beautiful Soup
-	soup = BeautifulSoup(html, 'html.parser')
-	# Retrieve all elements that contain book information
-	tweets = soup.find_all(attrs={"data-testid": "tweet"})
-	spans = soup.find_all('span', class_='css-901oao css-16my406 r-1qd0xha r-ad9z0x r-bcqeeo r-qvutc0')
-
-	for span in spans:
-		if "InSight" in span.text:
-			result = span.text
-			break
-			
-	mars_weather = result
-
-	mars_weather = result
-
-	MARS_WEATHER = {
-	"MARS_WEATHER":mars_weather
-	}
-
-
-	# Visit Spcae Facts
-	url = 'https://space-facts.com/mars/'
-	browser.visit(url)
-
-	# Pause, continue
-	time.sleep(2)
-
-	# Read url into html tables and view
-	tables = pd.read_html(url)
-	tables
-
-	# Slice out the table of choice
-	df = tables[0]
-	# Name columns
-	df.columns = [
-		'Data_Type',
-		'Data_Value'
-	]
-	# Preview
-	df.head()
-	# Replace colons
-	df['Data_Type'] = df.Data_Type.str.replace(':',"")
-
-	df.set_index('Data_Type', inplace=True)
-
-	# Convert to html table string
-	html_table = df.to_html()
-	html_table
-
-	# Remove new line text
-	html_table.replace('\n', '')
-
-	# Save to file
-	df.to_html('table.html')
-
-	SPACE_TABLE = {
-	"SPACE_TABLE":df.to_html()
-	}
-
-
-	# Visit Astrology
-	url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
-	browser.visit(url)
-
-	# Pause, continue
-	time.sleep(2)
-
-	# Iterate through all pages
-
-	# HTML object
-	html = browser.html
-	# Parse HTML with Beautiful Soup
-	soup = BeautifulSoup(html, 'html.parser')
-	# Retrieve all elements that contain book information
-	photos = soup.find_all('div', class_='description')
-
-	hemisphere_image_urls = []
-
-	# Iterate through each book
-	for photo in photos:
-		
-		section = photo.find('a', class_='itemLink product-item')
-		href_text = section.find('h3').text
-		
-		# Assign for dict
-		title = href_text
-		
-		try:
-			browser.click_link_by_partial_text(href_text)
-			
-			# HTML object
-			html = browser.html
-			# Parse HTML with Beautiful Soup
-			soup = BeautifulSoup(html, 'html.parser')
-			# Retrieve all elements that contain book information
-			
-			divs = soup.find('div', class_='downloads')
-			a_href = divs.find('a')
-			href = a_href['href']
-			
-			# Assign for dict
-			img_url = href
-			
-			# Create a dictionary with elements
-			dict = ({
-				'title':title,
-				'img_url':img_url
-			})
-			
-			# Append to outside list
-			hemisphere_image_urls.append(dict)
-			
-			# Return to previous page
-			browser.back()
-		
-		except:
-			print('Whoops')
-
-	MARS_IMGS = {
-	"MARS_IMGS":hemisphere_image_urls
-	}
-
-	scraped_data = {
-	"NASA_NEWS":NASA_NEWS,
-	"FEAT_IMG":FEAT_IMG,
-	"MARS_WEATHER":MARS_WEATHER,
-	"SPACE_TABLE":SPACE_TABLE,
-	"MARS_IMGS":MARS_IMGS
-	}
-
-	print(f"""
-	----------------------FIN----------------------
-		""")
-
-	browser.quit()
-
-	print(scraped_data)
-
-	return scraped_data
+    browser.quit()
+    
+    return mars_data
