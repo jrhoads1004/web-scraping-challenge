@@ -19,7 +19,7 @@ def scrape():
     content=requests.get(url1)
     soup = BeautifulSoup(content.text,"html.parser")
 
-    content_title = soup.find(class_="content_title").get_text().replace('\n','').strip()
+    news_title = soup.find(class_="content_title").get_text().replace('\n','').strip()
     news_p = soup.find("div",class_="rollover_description_inner").get_text().replace('\n','').strip()
 
     # JPL Mars Space Images - Featured Image
@@ -88,25 +88,14 @@ def scrape():
     img4_url=value[0].a["href"]
     img4_title=soup.find('h2', class_='title').text
     print(img4_title)
-    print(img4_url)
+    print(img4_url) 
 
-    # Store data in a dictionary
-
-    mars_data = {
-        "News_Title": content_title,
+    mars_data = { 
+        "News_Title": news_title,
         "News_Paragraph": news_p,
         "Featured_Image": featured_image_url,
-        "Weather": insight,
-        "img1" : img1_url,
-        "img2" : img2_url,
-        "img3" : img3_url,
-        "img4" : img4_url,
-        "img1_t" : img1_title,
-        "img2_t" : img2_title,
-        "img3_t" : img3_title,
-        "img4_t" : img4_title,
-    }
-
+        "Weather": insight}
+        
     browser.quit()
     
     return mars_data
